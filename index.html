@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASUNTA - Tu Tienda de Abarrotes en Comas, Lima</title>
+    <meta name="description" content="Tienda de abarrotes ASUNTA en Comas, Lima. Pedidos a domicilio con entrega rápida.">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        asunta: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            500: '#16a34a', // Verde principal
+                            600: '#15803d',
+                            700: '#166534',
+                            yellow: {
+                                100: '#fef9c3',
+                                400: '#facc15', // Amarillo suave
+                                500: '#eab308'
+                            }
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased flex flex-col min-h-screen">
+
+    <!-- Banner de estado de conexión con Supabase -->
+    <div id="conn-banner" class="hidden bg-red-600 text-white text-xs sm:text-sm py-2 px-4 text-center font-semibold">
+        <i class="fa-solid fa-triangle-exclamation mr-2"></i><span id="conn-banner-text">Problema de conexión con el servidor.</span>
+    </div>
+
+    <!-- Top Announcement Bar -->
+    <div class="bg-asunta-yellow-400 text-slate-900 text-xs sm:text-sm py-2 px-4 text-center font-semibold shadow-inner">
+        <i class="fa-solid fa-motorcycle mr-2"></i> Delivery rápido en Comas y zonas aledañas • <span data-delivery-info>Delivery: S/ 3.00 (Gratis desde S/ 50.00)</span>
+    </div>
+
+    <!-- Header & Navigation -->
+    <header class="sticky top-0 z-40 bg-white shadow-md transition-all">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <a href="#inicio" class="flex items-center gap-3 group">
+                    <div class="w-12 h-12 rounded-full bg-asunta-100 border-2 border-asunta-500 flex items-center justify-center text-asunta-600 shadow-sm group-hover:scale-105 transition-transform">
+                        <i class="fa-solid fa-basket-shopping text-2xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-black tracking-tight text-asunta-700">ASUNTA</span>
+                        <span class="block text-[10px] tracking-wider uppercase font-bold text-slate-500">Abarrotes & Bodega • Comas</span>
+                    </div>
+                </a>
+
+                <!-- Desktop Menu -->
+                <nav class="hidden md:flex items-center space-x-1 lg:space-x-6">
+                    <a href="#inicio" class="px-3 py-2 rounded-lg text-slate-600 hover:text-asunta-600 hover:bg-asunta-50 font-medium transition-colors">Inicio</a>
+                    <a href="#productos" class="px-3 py-2 rounded-lg text-slate-600 hover:text-asunta-600 hover:bg-asunta-50 font-medium transition-colors">Productos</a>
+                    <a href="#ofertas" class="px-3 py-2 rounded-lg text-slate-600 hover:text-asunta-600 hover:bg-asunta-50 font-medium transition-colors">Ofertas</a>
+                    <a href="#nosotros" class="px-3 py-2 rounded-lg text-slate-600 hover:text-asunta-600 hover:bg-asunta-50 font-medium transition-colors">Nosotros</a>
+                    <a href="#contacto" class="px-3 py-2 rounded-lg text-slate-600 hover:text-asunta-600 hover:bg-asunta-50 font-medium transition-colors">Contacto</a>
+                    <button id="order-lookup-btn" class="px-3 py-2 rounded-lg text-asunta-700 hover:bg-asunta-50 font-semibold transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-box-open"></i> Mis pedidos
+                    </button>
+                </nav>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-3">
+                    <button onclick="ASUNTA.orders.openLookup()" class="md:hidden text-asunta-700 hover:bg-asunta-50 p-3 rounded-lg" aria-label="Consultar pedido">
+                        <i class="fa-solid fa-box-open text-xl"></i>
+                    </button>
+                    <button onclick="ASUNTA.cart.toggleDrawer()" class="relative bg-asunta-50 hover:bg-asunta-100 text-asunta-700 p-3 rounded-full font-semibold transition-colors flex items-center justify-center w-12 h-12 border border-asunta-200 shadow-sm" aria-label="Abrir Carrito">
+                        <i class="fa-solid fa-cart-shopping text-xl"></i>
+                        <span id="cart-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center font-bold shadow-md hidden">0</span>
+                    </button>
+                    <button onclick="toggleMobileMenu()" class="md:hidden p-3 text-slate-700 hover:text-asunta-600 rounded-lg hover:bg-slate-100 transition-colors" aria-label="Menú principal">
+                        <i id="mobile-menu-icon" class="fa-solid fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Dropdown Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-slate-100 px-4 pt-2 pb-4 space-y-2 shadow-lg">
+            <a href="#inicio" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-asunta-600 hover:bg-asunta-50">Inicio</a>
+            <a href="#productos" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-asunta-600 hover:bg-asunta-50">Productos</a>
+            <a href="#ofertas" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-asunta-600 hover:bg-asunta-50">Ofertas</a>
+            <a href="#nosotros" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-asunta-600 hover:bg-asunta-50">Nosotros</a>
+            <a href="#contacto" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-asunta-600 hover:bg-asunta-50">Contacto</a>
+            <button onclick="toggleMobileMenu(); ASUNTA.orders.openLookup()" class="w-full text-left px-3 py-2 rounded-md text-base font-semibold text-asunta-700 hover:bg-asunta-50"><i class="fa-solid fa-box-open mr-2"></i>Mis pedidos</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow">
+
+        <!-- Hero Section -->
+        <section id="inicio" class="hero-pattern text-white py-16 md:py-24 relative overflow-hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-6 text-center md:text-left">
+                        <span class="inline-flex items-center gap-2 bg-asunta-yellow-400 text-slate-900 text-sm font-bold px-4 py-1.5 rounded-full shadow-md">
+                            <i class="fa-solid fa-store"></i> Bodega Tradicional y Moderna
+                        </span>
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
+                            ASUNTA, todo lo que necesitas para tu hogar
+                        </h1>
+                        <p class="text-lg sm:text-xl text-asunta-100 font-normal max-w-lg mx-auto md:mx-0">
+                            Productos de primera necesidad al mejor precio, frescos, de calidad y con entrega a domicilio en Comas y alrededores.
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-2">
+                            <a href="#productos" class="bg-asunta-yellow-400 hover:bg-yellow-300 text-slate-900 font-bold px-8 py-4 rounded-xl shadow-lg transition-transform hover:-translate-y-0.5 text-center flex items-center justify-center gap-2 text-lg">
+                                <i class="fa-solid fa-bag-shopping"></i> Ver productos
+                            </a>
+                            <a href="#ofertas" class="bg-white/10 hover:bg-white/20 border-2 border-white/30 text-white font-bold px-8 py-4 rounded-xl backdrop-blur-sm transition-colors text-center flex items-center justify-center gap-2 text-lg">
+                                <i class="fa-solid fa-tags text-asunta-yellow-400"></i> Ver ofertas
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex justify-center">
+                        <div class="relative w-full max-w-md bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 shadow-2xl">
+                            <div class="bg-white rounded-2xl p-6 text-slate-800 shadow-inner space-y-4">
+                                <div class="flex items-center justify-between border-b pb-3">
+                                    <span class="font-bold text-asunta-700 flex items-center gap-2"><i class="fa-solid fa-clock"></i> Horario de Atención</span>
+                                    <span class="bg-asunta-100 text-asunta-700 text-xs px-2.5 py-1 rounded-full font-semibold">Abierto hoy</span>
+                                </div>
+                                <p class="text-sm text-slate-600">Lunes a Domingo: <strong class="text-slate-800">7:00 a.m. - 9:30 p.m.</strong></p>
+                                <div class="pt-2 border-t flex items-center justify-between text-sm">
+                                    <span class="text-slate-600 font-medium"><i class="fa-solid fa-truck-fast text-asunta-600 mr-1"></i> Delivery Comas:</span>
+                                    <span class="font-bold text-asunta-600" data-delivery-info>S/ 3.00 o Gratis desde S/ 50</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Search & Filter Section -->
+        <section class="bg-white border-b border-slate-200 py-6 shadow-sm sticky top-20 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <!-- Search Bar -->
+                    <div class="w-full md:w-96 relative">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" id="search-input" placeholder="Buscar arroz, aceite, leche, detergente..." class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-asunta-500 focus:border-asunta-500 text-sm transition-all shadow-inner">
+                    </div>
+                    <!-- Sort + Category Filters -->
+                    <div class="w-full flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+                        <select id="sort-select" class="input-base w-full lg:w-48 bg-white" aria-label="Ordenar productos">
+                            <option value="new">Más recientes</option>
+                            <option value="name">Nombre (A-Z)</option>
+                            <option value="price-asc">Precio: menor a mayor</option>
+                            <option value="price-desc">Precio: mayor a menor</option>
+                        </select>
+                        <div id="category-filters" class="w-full lg:w-auto flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
+                            <div class="skeleton h-9 w-24"></div>
+                            <div class="skeleton h-9 w-24"></div>
+                            <div class="skeleton h-9 w-24"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Offers & Combo Highlights -->
+        <section id="ofertas" class="py-12 bg-asunta-50/50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col md:flex-row md:items-end justify-between mb-8">
+                    <div>
+                        <span class="text-asunta-600 font-bold text-sm tracking-wider uppercase">Ahorra más con ASUNTA</span>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tight mt-1">Ofertas y Combos de la Semana</h2>
+                    </div>
+                    <p class="text-slate-600 text-sm mt-2 md:mt-0">Combos armados para la economía familiar.</p>
+                </div>
+                <div id="offers-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Dinámico (promotions desde Supabase) -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Product Catalog Section -->
+        <section id="productos" class="py-12 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-8">
+                    <div>
+                        <span class="text-asunta-600 font-bold text-sm tracking-wider uppercase">Catálogo Completo</span>
+                        <h2 id="catalog-title" class="text-3xl font-black text-slate-900 tracking-tight mt-1">Nuestros Productos</h2>
+                    </div>
+                    <span id="product-count" class="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">Cargando…</span>
+                </div>
+
+                <!-- Error de conexión -->
+                <div id="catalog-error" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-2xl p-6 mb-6 text-center">
+                    <i class="fa-solid fa-plug-circle-xmark text-3xl mb-3"></i>
+                    <h3 class="font-bold text-lg">No se pudo cargar el catálogo</h3>
+                    <p id="catalog-error-msg" class="text-sm mt-1">Error de conexión.</p>
+                    <button id="catalog-retry" class="mt-4 bg-asunta-600 hover:bg-asunta-700 text-white px-6 py-2 rounded-xl font-semibold text-sm">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> Reintentar
+                    </button>
+                </div>
+
+                <!-- Products Grid -->
+                <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Dinámico (products desde Supabase) -->
+                </div>
+
+                <!-- Paginación -->
+                <div id="catalog-pager"></div>
+
+                <!-- Catálogo vacío (sin productos publicados) -->
+                <div id="empty-catalog" class="hidden text-center py-16">
+                    <div class="w-20 h-20 bg-asunta-50 rounded-full flex items-center justify-center mx-auto text-asunta-600 text-3xl mb-4">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">La tienda se está preparando</h3>
+                    <p class="text-slate-500 mt-1">El administrador aún no ha publicado productos. Vuelve a vernos muy pronto.</p>
+                </div>
+
+                <!-- Sin resultados de búsqueda -->
+                <div id="no-results" class="hidden text-center py-16">
+                    <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400 text-3xl mb-4">
+                        <i class="fa-solid fa-box-open"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">No se encontraron productos</h3>
+                    <p class="text-slate-500 mt-1">Intenta con otro término de búsqueda o categoría.</p>
+                    <button id="reset-filters-btn" class="mt-4 bg-asunta-600 hover:bg-asunta-700 text-white px-6 py-2 rounded-xl font-semibold transition-colors">Ver todos los productos</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Us -->
+        <section id="nosotros" class="py-16 bg-slate-100 border-t border-slate-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-6">
+                        <span class="bg-asunta-100 text-asunta-700 text-sm font-bold px-4 py-1.5 rounded-full inline-block">Nuestra Historia</span>
+                        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Tu bodega de confianza en el corazón de Comas</h2>
+                        <p class="text-slate-600 leading-relaxed">
+                            <strong>ASUNTA</strong> nació con el firme propósito de brindar a las familias de Comas y zonas aledañas abarrotes de primera necesidad con la mejor atención, precios justos y la comodidad de pedir desde casa. Nos caracterizamos por la calidez de barrio y el compromiso con nuestros vecinos.
+                        </p>
+                        <div class="grid grid-cols-2 gap-4 pt-4">
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                                <div class="text-asunta-600 text-2xl font-black mb-1">+10 Años</div>
+                                <div class="text-slate-500 text-sm">Sirviendo a la comunidad de Comas</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                                <div class="text-asunta-600 text-2xl font-black mb-1">100% Calidad</div>
+                                <div class="text-slate-500 text-sm">Productos frescos y garantizados</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <div class="bg-asunta-500 rounded-3xl p-2 shadow-xl">
+                            <img src="https://placehold.co/600x400/166534/ffffff?text=Bodega+ASUNTA+Comas" alt="Bodega ASUNTA en Comas" class="rounded-2xl w-full h-auto object-cover shadow-md" onerror="this.onerror=null;this.src='https://placehold.co/600x400/cccccc/ffffff?text=ASUNTA+Abarrotes'">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact & Location -->
+        <section id="contacto" class="py-16 bg-white border-t border-slate-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-2xl mx-auto mb-12">
+                    <span class="text-asunta-600 font-bold text-sm tracking-wider uppercase">Encuéntranos</span>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight mt-1">Visítanos o pídelo a domicilio</h2>
+                    <p class="text-slate-600 mt-2">Estamos ubicados en Comas, Lima. Consulta nuestra cobertura de reparto y canales oficiales.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                    <div class="space-y-6">
+                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+                            <div class="w-12 h-12 bg-asunta-100 text-asunta-600 rounded-xl flex items-center justify-center shrink-0 text-xl">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900">Dirección</h3>
+                                <p id="store-address-text" class="text-slate-600 text-sm mt-1">Av. Universitaria / Zona Comercial (Referencial), Comas, Lima, Perú</p>
+                                <span class="inline-block mt-2 text-xs bg-asunta-yellow-100 text-amber-800 font-semibold px-2.5 py-0.5 rounded-full">Actualizable desde el panel administrativo</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+                            <div class="w-12 h-12 bg-asunta-100 text-asunta-600 rounded-xl flex items-center justify-center shrink-0 text-xl">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900">Horario de Atención</h3>
+                                <p class="text-slate-600 text-sm mt-1">Lunes a Domingo: 7:00 a.m. a 9:30 p.m.</p>
+                                <p class="text-slate-500 text-xs mt-1">Atención continua todos los días del año.</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+                            <div class="w-12 h-12 bg-asunta-100 text-asunta-600 rounded-xl flex items-center justify-center shrink-0 text-xl">
+                                <i class="fa-solid fa-truck-ramp-box"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900">Cobertura de Reparto</h3>
+                                <p class="text-slate-600 text-sm mt-1">Todo Comas y zonas colindantes (Los Olivos, Independencia).</p>
+                                <p class="text-asunta-600 font-semibold text-xs mt-1" data-delivery-info>Delivery: S/ 3.00 (Gratis compras > S/ 50)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Map -->
+                    <div class="lg:col-span-2 bg-slate-100 p-3 rounded-3xl border border-slate-200 shadow-md">
+                        <div id="map" class="w-full h-[400px] rounded-2xl z-0"></div>
+                        <div class="mt-4 flex flex-col sm:flex-row items-center justify-between px-2 gap-4">
+                            <span class="text-xs text-slate-500"><i class="fa-solid fa-circle-info mr-1 text-asunta-600"></i> Mapa interactivo OpenStreetMap - Comas, Lima.</span>
+                            <a id="directions-btn" href="https://maps.google.com/?q=Comas,+Lima,+Peru" target="_blank" rel="noopener" class="bg-asunta-600 hover:bg-asunta-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center gap-2 shadow-sm">
+                                <i class="fa-solid fa-diamond-turn-right"></i> Cómo llegar (Google Maps)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-300 pt-12 pb-8 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-asunta-500 flex items-center justify-center text-white">
+                            <i class="fa-solid fa-basket-shopping"></i>
+                        </div>
+                        <span class="text-xl font-black text-white">ASUNTA</span>
+                    </div>
+                    <p class="text-sm text-slate-400">
+                        Tu tienda de abarrotes de confianza en Comas, Lima. Calidad, buenos precios y servicio amable siempre.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold mb-4 text-sm uppercase tracking-wider">Enlaces Rápidos</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#inicio" class="hover:text-asunta-yellow-400 transition-colors">Inicio</a></li>
+                        <li><a href="#productos" class="hover:text-asunta-yellow-400 transition-colors">Catálogo de Productos</a></li>
+                        <li><a href="#ofertas" class="hover:text-asunta-yellow-400 transition-colors">Ofertas y Combos</a></li>
+                        <li><button onclick="ASUNTA.orders.openLookup()" class="hover:text-asunta-yellow-400 transition-colors">Consultar mi pedido</button></li>
+                        <li><a href="admin.html" class="text-slate-500 hover:text-slate-300 transition-colors text-xs">Acceso administrativo</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold mb-4 text-sm uppercase tracking-wider">Categorías</h4>
+                    <ul id="footer-categories" class="space-y-2 text-sm">
+                        <!-- Dinámico (categorías desde Supabase) -->
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold mb-4 text-sm uppercase tracking-wider">Pedidos Directos</h4>
+                    <p class="text-sm text-slate-400 mb-4">Haz tus pedidos de forma rápida y segura por WhatsApp.</p>
+                    <button id="footer-whatsapp-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white w-full py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-sm shadow-lg">
+                        <i class="fa-brands fa-whatsapp text-lg"></i> Pedir por WhatsApp
+                    </button>
+                </div>
+            </div>
+            <div class="border-t border-slate-800 pt-6 text-center text-xs text-slate-500">
+                <p>&copy; 2026 Tienda de Abarrotes ASUNTA - Comas, Lima, Perú. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Shopping Cart Slide-over Drawer -->
+    <div id="cart-drawer" class="fixed inset-0 z-50 overflow-hidden hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="ASUNTA.cart.toggleDrawer(false)"></div>
+        <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div class="drawer-panel w-screen max-w-md bg-white shadow-2xl flex flex-col">
+                <div class="p-6 bg-asunta-700 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-cart-shopping text-2xl text-asunta-yellow-400"></i>
+                        <div>
+                            <h2 class="text-lg font-bold">Tu Carrito ASUNTA</h2>
+                            <p class="text-xs text-asunta-100" id="cart-item-count-label">0 artículos</p>
+                        </div>
+                    </div>
+                    <button onclick="ASUNTA.cart.toggleDrawer(false)" class="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors" aria-label="Cerrar carrito">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div id="cart-items" class="flex-1 overflow-y-auto p-6 space-y-4 divide-y divide-slate-100"></div>
+                <div class="p-6 bg-slate-50 border-t border-slate-200 space-y-4">
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between text-slate-600">
+                            <span>Subtotal</span>
+                            <span id="cart-subtotal" class="font-semibold text-slate-800">S/ 0.00</span>
+                        </div>
+                        <div class="flex justify-between text-slate-600">
+                            <span>Delivery estimado (Comas)</span>
+                            <span id="cart-delivery" class="font-semibold text-slate-800">S/ 3.00</span>
+                        </div>
+                        <div class="flex justify-between text-base font-bold text-slate-900 pt-2 border-t border-slate-200">
+                            <span>Total a Pagar</span>
+                            <span id="cart-total" class="text-asunta-700">S/ 0.00</span>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <button id="checkout-btn" onclick="ASUNTA.checkout.open()" disabled class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-cash-register text-xl"></i> Realizar pedido
+                        </button>
+                        <button onclick="ASUNTA.cart.clear(); ASUNTA.toast('El carrito ha sido vaciado.')" class="w-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 font-semibold py-2.5 px-4 rounded-xl transition-colors text-sm">
+                            Vaciar carrito
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400 text-center">El pedido queda registrado en el sistema y luego puedes confirmarlo por WhatsApp.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm modal-backdrop" onclick="ASUNTA.checkout.close()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden modal-panel">
+
+                <!-- PASO 1: formulario -->
+                <div id="checkout-step-form">
+                    <div class="p-6 bg-asunta-700 text-white flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-truck-fast text-2xl text-asunta-yellow-400"></i>
+                            <div>
+                                <h2 class="text-lg font-bold">Completa tu pedido</h2>
+                                <p class="text-xs text-asunta-100">Entrega a domicilio en Comas y alrededores</p>
+                            </div>
+                        </div>
+                        <button onclick="ASUNTA.checkout.close()" class="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10" aria-label="Cerrar">
+                            <i class="fa-solid fa-xmark text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre completo *</label>
+                                <input id="ck-name" type="text" maxlength="150" class="input-base" placeholder="Ej. María Quispe García">
+                                <p id="ck-name-error" class="field-error hidden"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Teléfono (WhatsApp) *</label>
+                                <input id="ck-phone" type="tel" maxlength="17" class="input-base" placeholder="Ej. 987 654 321">
+                                <p id="ck-phone-error" class="field-error hidden"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Correo (opcional)</label>
+                                <input id="ck-email" type="email" maxlength="255" class="input-base" placeholder="tu@correo.com">
+                                <p id="ck-email-error" class="field-error hidden"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Distrito *</label>
+                                <input id="ck-district" type="text" maxlength="80" class="input-base" placeholder="Ej. Comas" list="district-list">
+                                <datalist id="district-list">
+                                    <option value="Comas"><option value="Los Olivos"><option value="Independencia">
+                                    <option value="Carabayllo"><option value="Puente Piedra">
+                                </datalist>
+                                <p id="ck-district-error" class="field-error hidden"></p>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección de entrega *</label>
+                                <input id="ck-address" type="text" maxlength="250" class="input-base" placeholder="Ej. Av. Los Alamos 123">
+                                <p id="ck-address-error" class="field-error hidden"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Referencia del domicilio</label>
+                                <input id="ck-ref" type="text" maxlength="150" class="input-base" placeholder="Ej. Casa azul, frente al parque">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Indicaciones adicionales</label>
+                                <textarea id="ck-notes" maxlength="500" rows="2" class="input-base" placeholder="Ej. llamar al llegar, entregar a mi hijo…"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Método de pago</label>
+                                <div id="pay-methods" class="flex flex-wrap gap-2">
+                                    <!-- Dinámico (store_settings.payment_methods) -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 pb-6 space-y-4">
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-1">
+                            <div id="checkout-items" class="space-y-1"></div>
+                            <div class="border-t border-slate-200 pt-2 mt-2 space-y-1">
+                                <div class="flex justify-between text-sm"><span class="text-slate-500">Subtotal</span><span id="ck-subtotal" class="font-semibold">S/ 0.00</span></div>
+                                <div class="flex justify-between text-sm"><span class="text-slate-500">Delivery</span><span id="ck-delivery" class="font-semibold">S/ 3.00</span></div>
+                                <div class="flex justify-between font-bold text-slate-900"><span>Total</span><span id="ck-total" class="text-asunta-700">S/ 0.00</span></div>
+                            </div>
+                        </div>
+                        <button id="ck-submit-btn" onclick="ASUNTA.checkout.submit()" class="w-full bg-asunta-600 hover:bg-asunta-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 text-lg shadow-lg transition-colors">
+                            <i class="fa-solid fa-check-circle"></i> Confirmar y registrar mi pedido
+                        </button>
+                        <p class="text-[11px] text-slate-400 text-center">Al confirmar, tu pedido se registra en el sistema de ASUNTA y recibes un código para seguirlo y coordinar por WhatsApp.</p>
+                    </div>
+                </div>
+
+                <!-- PASO 2: procesando -->
+                <div id="checkout-step-loading" class="hidden p-16 text-center">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-asunta-600"></i>
+                    <h3 class="mt-4 font-bold text-slate-800 text-lg">Registrando tu pedido…</h3>
+                    <p class="text-sm text-slate-500 mt-1">Estamos verificando existencias y precios actualizados.</p>
+                </div>
+
+                <!-- PASO 3: confirmación -->
+                <div id="checkout-step-confirm" class="hidden">
+                    <div class="p-8 bg-asunta-700 text-white text-center" id="confirm-print-area">
+                        <div class="w-20 h-20 mx-auto bg-white/10 border-2 border-asunta-yellow-400 rounded-full flex items-center justify-center text-asunta-yellow-400 text-3xl mb-4">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <h2 class="text-2xl font-black">¡Pedido registrado!</h2>
+                        <p class="text-asunta-100 text-sm mt-1">Guarda tu código de pedido:</p>
+                        <div class="mt-3 bg-white text-asunta-700 inline-block px-8 py-3 rounded-2xl font-black text-2xl tracking-widest shadow-lg" id="confirm-code">ASU-000000</div>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div id="confirm-summary" class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-1"></div>
+                        <button onclick="ASUNTA.checkout.sendWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 text-lg shadow-lg transition-colors">
+                            <i class="fa-brands fa-whatsapp text-xl"></i> Enviar pedido por WhatsApp
+                        </button>
+                        <button onclick="ASUNTA.orders.openLookup(); ASUNTA.checkout.close()" class="w-full btn-ghost text-sm">
+                            <i class="fa-solid fa-box-open mr-1"></i> Consultar estado de mi pedido
+                        </button>
+                        <button onclick="ASUNTA.checkout.close()" class="w-full text-slate-500 hover:text-slate-700 text-sm font-semibold py-2">Seguir comprando</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Lookup Modal -->
+    <div id="orders-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="ASUNTA.orders.closeLookup()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden">
+                <div class="p-6 bg-asunta-700 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-box-open text-2xl text-asunta-yellow-400"></i>
+                        <div>
+                            <h2 class="text-lg font-bold">Mis pedidos</h2>
+                            <p class="text-xs text-asunta-100">Consulta con tu código y el teléfono de la compra</p>
+                        </div>
+                    </div>
+                    <button onclick="ASUNTA.orders.closeLookup()" class="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10" aria-label="Cerrar">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div id="saved-orders"></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">CÓDIGO DEL PEDIDO</label>
+                            <input id="lookup-code" type="text" class="input-base uppercase" placeholder="ASU-000001">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">TELÉFONO USADO</label>
+                            <input id="lookup-phone" type="tel" class="input-base" placeholder="987 654 321">
+                        </div>
+                    </div>
+                    <button id="lookup-btn" onclick="ASUNTA.orders.doLookup()" class="w-full bg-asunta-600 hover:bg-asunta-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass"></i> Buscar pedido
+                    </button>
+                    <div id="order-result"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-[60] transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-medium border border-slate-700">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-asunta-yellow-400 text-lg"></i>
+            <span id="toast-message">Listo</span>
+        </div>
+    </div>
+
+    <!-- Application Logic (orden de carga importante) -->
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/checkout.js"></script>
+    <script src="js/orders.js"></script>
+    <script>
+        /* Funciones de interfaz heredadas del diseño original (corregidas) */
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const icon = document.getElementById('mobile-menu-icon');
+            menu.classList.toggle('hidden');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-xmark');
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1) Carrito primero (necesita la configuración de delivery)
+            await ASUNTA.cart.init();
+            // 2) Catálogo desde Supabase
+            ASUNTA.store.boot();
+            // 3) Mapa y datos de contacto desde la configuración
+            ASUNTA.store.initMapAndContact();
+
+            // Buscador con pequeño debounce para no filtrar en cada tecla
+            let t;
+            document.getElementById('search-input').addEventListener('input', function () {
+                clearTimeout(t);
+                const v = this.value;
+                t = setTimeout(() => ASUNTA.store.setSearch(v), 250);
+            });
+            document.getElementById('sort-select').addEventListener('change', function () {
+                ASUNTA.store.setSort(this.value);
+            });
+            document.getElementById('reset-filters-btn').addEventListener('click', () => ASUNTA.store.resetFilters());
+            document.getElementById('order-lookup-btn').addEventListener('click', () => ASUNTA.orders.openLookup());
+
+            // Enlaces de categorías del footer (dinámicos)
+            setTimeout(async () => {
+                try {
+                    const { data: cats } = await ASUNTA.sb.from('categories').select('id, name').eq('active', true).order('name');
+                    const box = document.getElementById('footer-categories');
+                    if (box && cats) {
+                        box.innerHTML = cats.slice(0, 6).map(c =>
+                            '<li><a href="#productos" data-cat-id="' + ASUNTA.esc(c.id) + '" class="footer-cat hover:text-asunta-yellow-400 transition-colors">' + ASUNTA.esc(c.name) + '</a></li>'
+                        ).join('');
+                        box.querySelectorAll('.footer-cat').forEach(a => {
+                            a.addEventListener('click', function () {
+                                ASUNTA.store.setCategory(this.getAttribute('data-cat-id'));
+                            });
+                        });
+                    }
+                } catch (_) { /* no crítico */ }
+            }, 1500);
+
+            // Cerrar modales con la tecla Escape
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    ASUNTA.checkout.close();
+                    ASUNTA.orders.closeLookup();
+                    ASUNTA.cart.toggleDrawer(false);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
