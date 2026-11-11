@@ -111,3 +111,31 @@
   #confirm-print-area, #confirm-print-area * { visibility: visible; }
   #confirm-print-area { position: absolute; left: 0; top: 0; width: 100%; }
 }
+
+/* ============================================================
+   Mapa Leaflet - etiqueta permanente del marcador ASUNTA
+   ============================================================ */
+.asunta-map-label {
+  background: #16a34a !important;
+  color: white !important;
+  border: 2px solid #166534 !important;
+  border-radius: 6px !important;
+  padding: 2px 8px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25) !important;
+  white-space: nowrap !important;
+}
+.asunta-map-label::before {
+  border-top-color: #16a34a !important;
+}
+
+/* Asegura que el contenedor del mapa tenga altura mínima */
+#map {
+  min-height: 320px;
+  height: 100%;
+  z-index: 1;
+}
+/* Evita que los controles de Leaflet se superpongan con el header sticky */
+.leaflet-top, .leaflet-bottom { z-index: 400 !important; }
