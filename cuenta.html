@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi cuenta - ASUNTA</title>
+    <meta name="description" content="Crea tu cuenta ASUNTA, gestiona tus datos y revisa tus pedidos.">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        asunta: {
+                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0',
+                            500: '#16a34a', 600: '#15803d', 700: '#166534',
+                            yellow: { 100: '#fef9c3', 400: '#facc15', 500: '#eab308' }
+                        }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 flex flex-col min-h-screen">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white shadow-md">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <a href="index.html" class="flex items-center gap-3 group">
+                    <div class="w-12 h-12 rounded-full bg-asunta-100 border-2 border-asunta-500 flex items-center justify-center text-asunta-600 shadow-sm group-hover:scale-105 transition-transform">
+                        <i class="fa-solid fa-basket-shopping text-2xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-black tracking-tight text-asunta-700">ASUNTA</span>
+                        <span class="block text-[10px] tracking-wider uppercase font-bold text-slate-500">Abarrotes & Bodega • Comas</span>
+                    </div>
+                </a>
+                <a href="index.html" class="px-4 py-2 rounded-lg text-slate-600 hover:text-asunta-600 hover:bg-asunta-50 font-medium transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a la tienda
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-grow py-8 md:py-12">
+        <div class="max-w-md mx-auto px-4">
+
+            <!-- =================== VISTA NO AUTENTICADO =================== -->
+            <div id="auth-view" class="hidden">
+                <!-- Pestañas: Login / Registro -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="grid grid-cols-2 border-b border-slate-200">
+                        <button id="tab-login" class="py-4 px-4 font-bold text-asunta-700 border-b-2 border-asunta-600 bg-asunta-50 transition-colors">
+                            <i class="fa-solid fa-right-to-bracket mr-2"></i>Iniciar sesión
+                        </button>
+                        <button id="tab-register" class="py-4 px-4 font-bold text-slate-500 border-b-2 border-transparent hover:text-asunta-700 hover:bg-asunta-50 transition-colors">
+                            <i class="fa-solid fa-user-plus mr-2"></i>Crear cuenta
+                        </button>
+                    </div>
+
+                    <!-- Formulario de LOGIN -->
+                    <form id="login-form" class="p-6 space-y-4">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800">Bienvenido de nuevo</h2>
+                            <p class="text-sm text-slate-500 mt-1">Ingresa con tu correo y contraseña.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Correo electrónico</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input id="login-email" type="email" autocomplete="email" required
+                                       class="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                       placeholder="tu@correo.com">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Contraseña</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input id="login-password" type="password" autocomplete="current-password" required
+                                       class="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                       placeholder="••••••••">
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <button type="button" id="login-forgot" class="text-xs text-asunta-600 hover:text-asunta-700 font-semibold">¿Olvidaste tu contraseña?</button>
+                        </div>
+                        <button type="submit" id="login-submit"
+                                class="w-full bg-asunta-600 hover:bg-asunta-700 text-white font-bold py-3 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-right-to-bracket"></i> Iniciar sesión
+                        </button>
+                        <p class="text-xs text-slate-400 text-center">Si eres el administrador, ingresa por <a href="admin.html" class="text-asunta-600 font-semibold hover:underline">admin.html</a>.</p>
+                    </form>
+
+                    <!-- Formulario de REGISTRO -->
+                    <form id="register-form" class="p-6 space-y-4 hidden">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800">Crea tu cuenta</h2>
+                            <p class="text-sm text-slate-500 mt-1">Tus datos quedan guardados para que tus próximas compras sean más rápidas.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre completo *</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input id="reg-name" type="text" autocomplete="name" required
+                                       class="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                       placeholder="Ej. María Pérez">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Teléfono *</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-phone absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input id="reg-phone" type="tel" autocomplete="tel" required
+                                       class="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                       placeholder="Ej. 987 654 321">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Correo electrónico *</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input id="reg-email" type="email" autocomplete="email" required
+                                       class="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                       placeholder="tu@correo.com">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Contraseña *</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input id="reg-password" type="password" autocomplete="new-password" required minlength="6"
+                                       class="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                       placeholder="Mínimo 6 caracteres">
+                            </div>
+                        </div>
+                        <label class="flex items-start gap-2 text-xs text-slate-600">
+                            <input id="reg-terms" type="checkbox" required class="mt-0.5">
+                            <span>He leído y acepto los términos del servicio y la política de privacidad de ASUNTA.</span>
+                        </label>
+                        <button type="submit" id="reg-submit"
+                                class="w-full bg-asunta-600 hover:bg-asunta-700 text-white font-bold py-3 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-user-plus"></i> Crear mi cuenta
+                        </button>
+                    </form>
+
+                    <!-- Recuperar contraseña -->
+                    <form id="forgot-form" class="p-6 space-y-4 hidden">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800">Recuperar contraseña</h2>
+                            <p class="text-sm text-slate-500 mt-1">Te enviaremos un enlace a tu correo para restablecerla.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Correo electrónico</label>
+                            <input id="forgot-email" type="email" required
+                                   class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                   placeholder="tu@correo.com">
+                        </div>
+                        <button type="submit" id="forgot-submit"
+                                class="w-full bg-asunta-600 hover:bg-asunta-700 text-white font-bold py-3 rounded-xl shadow-sm transition-colors">
+                            Enviar enlace
+                        </button>
+                        <button type="button" id="forgot-cancel" class="w-full text-xs text-slate-500 hover:text-slate-700 font-semibold">Volver</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- =================== VISTA AUTENTICADO =================== -->
+            <div id="account-view" class="hidden space-y-6">
+
+                <!-- Tarjeta de bienvenida -->
+                <div class="bg-gradient-to-br from-asunta-600 to-asunta-700 rounded-2xl p-6 text-white shadow-md">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-2xl font-black">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs uppercase tracking-wider text-asunta-100 font-bold">Bienvenido(a)</p>
+                            <h2 id="welcome-name" class="text-xl font-black truncate">-</h2>
+                            <p id="welcome-email" class="text-sm text-asunta-100 truncate">-</p>
+                        </div>
+                        <button id="logout-btn" class="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-right-from-bracket"></i> Salir
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pestañas internas: Mis datos / Mis pedidos / Seguridad -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="flex border-b border-slate-200">
+                        <button data-tab="profile" class="acc-tab flex-1 py-3 px-2 text-sm font-bold text-asunta-700 border-b-2 border-asunta-600 bg-asunta-50 transition-colors">
+                            <i class="fa-solid fa-id-card mr-1"></i> Mis datos
+                        </button>
+                        <button data-tab="orders" class="acc-tab flex-1 py-3 px-2 text-sm font-bold text-slate-500 border-b-2 border-transparent hover:text-asunta-700 hover:bg-asunta-50 transition-colors">
+                            <i class="fa-solid fa-box-open mr-1"></i> Mis pedidos
+                        </button>
+                        <button data-tab="security" class="acc-tab flex-1 py-3 px-2 text-sm font-bold text-slate-500 border-b-2 border-transparent hover:text-asunta-700 hover:bg-asunta-50 transition-colors">
+                            <i class="fa-solid fa-shield-halved mr-1"></i> Seguridad
+                        </button>
+                    </div>
+
+                    <!-- Panel: Mis datos -->
+                    <div id="panel-profile" class="p-6 space-y-4">
+                        <form id="profile-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre completo</label>
+                                <input id="pf-name" type="text" required
+                                       class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Teléfono</label>
+                                <input id="pf-phone" type="tel"
+                                       class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección favorita (para delivery)</label>
+                                <input id="pf-address" type="text"
+                                       class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                       placeholder="Ej. Av. Los Olivos 123">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1">Distrito</label>
+                                    <input id="pf-district" type="text"
+                                           class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                           placeholder="Ej. Comas">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1">Referencia</label>
+                                    <input id="pf-reference" type="text"
+                                           class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                           placeholder="Ej. Casa azul con reja negra">
+                                </div>
+                            </div>
+                            <button type="submit" id="pf-save"
+                                    class="w-full bg-asunta-600 hover:bg-asunta-700 text-white font-bold py-3 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Panel: Mis pedidos -->
+                    <div id="panel-orders" class="p-6 hidden">
+                        <div id="orders-list" class="space-y-3">
+                            <div class="text-center text-slate-400 py-8">
+                                <i class="fa-solid fa-spinner fa-spin text-2xl"></i>
+                                <p class="text-sm mt-2">Cargando tus pedidos…</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel: Seguridad -->
+                    <div id="panel-security" class="p-6 hidden space-y-4">
+                        <form id="password-form" class="space-y-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800">Cambiar contraseña</h3>
+                                <p class="text-xs text-slate-500 mt-1">Te pediremos la contraseña actual al iniciar sesión la próxima vez.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Nueva contraseña</label>
+                                <input id="new-password" type="password" autocomplete="new-password" required minlength="6"
+                                       class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-asunta-600 focus:ring-2 focus:ring-asunta-100 outline-none transition-colors"
+                                       placeholder="Mínimo 6 caracteres">
+                            </div>
+                            <button type="submit" id="password-submit"
+                                    class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-key"></i> Actualizar contraseña
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none">
+        <div class="bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-md">
+            <i id="toast-icon" class="text-lg fa-solid fa-circle-check text-asunta-yellow-400"></i>
+            <span id="toast-message" class="text-sm font-medium">-</span>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-asunta-700 text-white py-6 mt-auto">
+        <div class="max-w-5xl mx-auto px-4 text-center">
+            <p class="text-sm text-asunta-100">© 2024 ASUNTA · Tienda de abarrotes en Comas, Lima</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/supabase.js"></script>
+    <script src="js/customer-auth.js"></script>
+    <script>
+        (async function () {
+            'use strict';
+
+            const $ = id => document.getElementById(id);
+
+            /* ---------- Toast helper ---------- */
+            function toast(msg, type) {
+                const t = $('toast');
+                $('toast-message').textContent = msg;
+                const icon = $('toast-icon');
+                icon.className = 'text-lg ' + (type === 'error'
+                    ? 'fa-solid fa-circle-exclamation text-red-400'
+                    : type === 'warn'
+                        ? 'fa-solid fa-triangle-exclamation text-asunta-yellow-400'
+                        : 'fa-solid fa-circle-check text-asunta-yellow-400');
+                t.classList.remove('translate-y-20', 'opacity-0');
+                t.classList.add('translate-y-0', 'opacity-100');
+                clearTimeout(t._timer);
+                t._timer = setTimeout(() => {
+                    t.classList.remove('translate-y-0', 'opacity-100');
+                    t.classList.add('translate-y-20', 'opacity-0');
+                }, 3500);
+            }
+
+            /* ---------- Cambio de pestañas auth ---------- */
+            function showAuthPane(pane) {
+                ['login-form', 'register-form', 'forgot-form'].forEach(id => $(id).classList.add('hidden'));
+                $('login-form').classList.toggle('hidden', pane !== 'login');
+                $('register-form').classList.toggle('hidden', pane !== 'register');
+                $('forgot-form').classList.toggle('hidden', pane !== 'forgot');
+                $('tab-login').classList.toggle('border-asunta-600', pane === 'login');
+                $('tab-login').classList.toggle('text-asunta-700', pane === 'login');
+                $('tab-login').classList.toggle('bg-asunta-50', pane === 'login');
+                $('tab-login').classList.toggle('border-transparent', pane !== 'login');
+                $('tab-login').classList.toggle('text-slate-500', pane !== 'login');
+                $('tab-register').classList.toggle('border-asunta-600', pane === 'register');
+                $('tab-register').classList.toggle('text-asunta-700', pane === 'register');
+                $('tab-register').classList.toggle('bg-asunta-50', pane === 'register');
+                $('tab-register').classList.toggle('border-transparent', pane !== 'register');
+                $('tab-register').classList.toggle('text-slate-500', pane !== 'register');
+            }
+
+            $('tab-login').addEventListener('click', () => showAuthPane('login'));
+            $('tab-register').addEventListener('click', () => showAuthPane('register'));
+            $('login-forgot').addEventListener('click', () => showAuthPane('forgot'));
+            $('forgot-cancel').addEventListener('click', () => showAuthPane('login'));
+
+            /* ---------- LOGIN ---------- */
+            $('login-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = $('login-submit');
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Entrando…';
+                try {
+                    const r = await ASUNTA.customerAuth.signIn($('login-email').value, $('login-password').value);
+                    if (!r.ok) {
+                        toast(r.error, 'error');
+                        if (r.redirectToAdmin) {
+                            setTimeout(() => location.href = 'admin.html', 1800);
+                        }
+                    } else {
+                        toast('Sesión iniciada. ¡Bienvenido!');
+                        setTimeout(() => location.reload(), 700);
+                    }
+                } catch (err) {
+                    toast(ASUNTA.dbErrorMessage(err), 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                }
+            });
+
+            /* ---------- REGISTRO ---------- */
+            $('register-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!$('reg-terms').checked) {
+                    toast('Debes aceptar los términos del servicio.', 'warn');
+                    return;
+                }
+                const btn = $('reg-submit');
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creando…';
+                try {
+                    const r = await ASUNTA.customerAuth.signUp({
+                        email: $('reg-email').value,
+                        password: $('reg-password').value,
+                        fullName: $('reg-name').value,
+                        phone: $('reg-phone').value
+                    });
+                    if (!r.ok) {
+                        toast(r.error, 'error');
+                    } else if (r.needsEmailConfirmation) {
+                        toast('Cuenta creada. Revisa tu correo para confirmarla antes de iniciar sesión.', 'warn');
+                        showAuthPane('login');
+                    } else {
+                        toast('¡Cuenta creada! Bienvenido(a) a ASUNTA.');
+                        setTimeout(() => location.reload(), 800);
+                    }
+                } catch (err) {
+                    toast(ASUNTA.dbErrorMessage(err), 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                }
+            });
+
+            /* ---------- RECUPERAR CONTRASEÑA ---------- */
+            $('forgot-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = $('forgot-submit');
+                btn.disabled = true;
+                btn.textContent = 'Enviando…';
+                try {
+                    const r = await ASUNTA.customerAuth.sendPasswordReset($('forgot-email').value);
+                    if (!r.ok) toast(r.error, 'error');
+                    else {
+                        toast('Enlace enviado. Revisa tu correo.', 'warn');
+                        showAuthPane('login');
+                    }
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Enviar enlace';
+                }
+            });
+
+            /* ---------- CERRAR SESIÓN ---------- */
+            $('logout-btn').addEventListener('click', async () => {
+                await ASUNTA.customerAuth.signOut();
+                toast('Sesión cerrada.');
+                setTimeout(() => location.reload(), 600);
+            });
+
+            /* ---------- PESTAÑAS INTERNAS (perfil / pedidos / seguridad) ---------- */
+            document.querySelectorAll('.acc-tab').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const t = btn.getAttribute('data-tab');
+                    document.querySelectorAll('.acc-tab').forEach(b => {
+                        const active = b === btn;
+                        b.classList.toggle('border-asunta-600', active);
+                        b.classList.toggle('text-asunta-700', active);
+                        b.classList.toggle('bg-asunta-50', active);
+                        b.classList.toggle('border-transparent', !active);
+                        b.classList.toggle('text-slate-500', !active);
+                    });
+                    ['profile', 'orders', 'security'].forEach(p => {
+                        $('panel-' + p).classList.toggle('hidden', p !== t);
+                    });
+                    if (t === 'orders') renderOrders();
+                });
+            });
+
+            /* ---------- FORMULARIO DE PERFIL ---------- */
+            $('profile-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = $('pf-save');
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando…';
+                try {
+                    await ASUNTA.customerAuth.updateProfile({
+                        fullName: $('pf-name').value,
+                        phone: $('pf-phone').value,
+                        defaultAddress: $('pf-address').value,
+                        defaultDistrict: $('pf-district').value,
+                        defaultReference: $('pf-reference').value
+                    });
+                    toast('Tus datos se guardaron correctamente.');
+                } catch (err) {
+                    toast(ASUNTA.dbErrorMessage(err), 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                }
+            });
+
+            /* ---------- CAMBIO DE CONTRASEÑA ---------- */
+            $('password-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = $('password-submit');
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Actualizando…';
+                try {
+                    const r = await ASUNTA.customerAuth.changePassword($('new-password').value);
+                    if (!r.ok) toast(r.error, 'error');
+                    else {
+                        toast('Contraseña actualizada.');
+                        $('new-password').value = '';
+                    }
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                }
+            });
+
+            /* ---------- Renderizar pedidos propios ---------- */
+            async function renderOrders() {
+                const box = $('orders-list');
+                try {
+                    const list = await ASUNTA.customerAuth.loadMyOrders();
+                    if (!list.length) {
+                        box.innerHTML =
+                            '<div class="text-center text-slate-400 py-12">' +
+                                '<i class="fa-solid fa-box-open text-4xl mb-3"></i>' +
+                                '<p class="font-semibold">Aún no tienes pedidos.</p>' +
+                                '<a href="index.html" class="inline-block mt-3 text-asunta-600 font-bold hover:underline">Ir a comprar →</a>' +
+                            '</div>';
+                        return;
+                    }
+                    box.innerHTML = list.map(o => {
+                        const items = (o.order_items || []).map(it =>
+                            '<div class="flex justify-between text-xs py-0.5">' +
+                                '<span class="text-slate-600">' + ASUNTA.esc(it.product_name) + ' <b>x' + Number(it.quantity) + '</b></span>' +
+                                '<span class="font-semibold text-slate-700">' + ASUNTA.fmt(it.subtotal) + '</span>' +
+                            '</div>'
+                        ).join('');
+                        return '<div class="bg-slate-50 border border-slate-200 rounded-xl p-4">' +
+                            '<div class="flex items-center justify-between mb-2">' +
+                                '<span class="font-black text-asunta-700">' + ASUNTA.esc(o.order_code) + '</span>' +
+                                ASUNTA.statusBadge(o.status) +
+                            '</div>' +
+                            '<p class="text-xs text-slate-400 mb-2">' + ASUNTA.fmtDate(o.created_at) + '</p>' +
+                            '<div class="border-t border-slate-200 pt-2 mb-2">' + items + '</div>' +
+                            '<div class="border-t border-slate-200 pt-2 flex justify-between font-bold text-sm">' +
+                                '<span>Total</span><span class="text-asunta-700">' + ASUNTA.fmt(o.total) + '</span>' +
+                            '</div>' +
+                            '<p class="text-xs text-slate-500 mt-2"><i class="fa-solid fa-location-dot mr-1"></i>' +
+                                ASUNTA.esc(o.delivery_address) + ', ' + ASUNTA.esc(o.district || '-') + '</p>' +
+                        '</div>';
+                    }).join('');
+                } catch (e) {
+                    box.innerHTML =
+                        '<div class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">' +
+                            '<i class="fa-solid fa-circle-exclamation mr-2"></i>' + ASUNTA.esc(ASUNTA.dbErrorMessage(e)) +
+                        '</div>';
+                }
+            }
+
+            /* ---------- Estado inicial ---------- */
+            async function boot() {
+                const session = await ASUNTA.customerAuth.getSession();
+                if (session) {
+                    const profile = await ASUNTA.customerAuth.loadProfile();
+                    $('auth-view').classList.add('hidden');
+                    $('account-view').classList.remove('hidden');
+                    $('welcome-name').textContent = (profile && profile.full_name) || (session.user.email || '');
+                    $('welcome-email').textContent = session.user.email || '';
+                    if (profile) {
+                        $('pf-name').value = profile.full_name || '';
+                        $('pf-phone').value = profile.phone || '';
+                        $('pf-address').value = profile.default_address || '';
+                        $('pf-district').value = profile.default_district || '';
+                        $('pf-reference').value = profile.default_reference || '';
+                    }
+                } else {
+                    $('auth-view').classList.remove('hidden');
+                    $('account-view').classList.add('hidden');
+                }
+            }
+
+            // Sincroniza cierre de sesión desde otra pestaña
+            ASUNTA.customerAuth.onSessionChange((event, session) => {
+                if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+                    if (!$('auth-view').classList.contains('hidden')) return;
+                    location.reload();
+                }
+            });
+
+            boot();
+        })();
+    </script>
+</body>
+</html>

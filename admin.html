@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>ASUNTA - Panel Administrativo</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        asunta: {
+                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0',
+                            500: '#16a34a', 600: '#15803d', 700: '#166534',
+                            yellow: { 100: '#fef9c3', 400: '#facc15', 500: '#eab308' }
+                        }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen">
+
+    <!-- ============ VISTA: INICIO DE SESIÓN ============ -->
+    <div id="view-login" class="hidden min-h-screen flex items-center justify-center hero-pattern p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+            <div class="p-8 bg-asunta-700 text-white text-center">
+                <div class="w-16 h-16 mx-auto rounded-full bg-white/10 border-2 border-asunta-yellow-400 flex items-center justify-center text-asunta-yellow-400 text-2xl mb-3">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h1 class="text-2xl font-black">Panel Administrativo</h1>
+                <p class="text-asunta-100 text-sm mt-1">Tienda de Abarrotes ASUNTA • Comas</p>
+            </div>
+            <div class="p-8 space-y-4">
+                <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm"></div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Correo del administrador</label>
+                    <input id="login-email" type="email" class="input-base" placeholder="admin@correo.com" autocomplete="username">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Contraseña</label>
+                    <div class="relative">
+                        <input id="login-password" type="password" class="input-base pr-10" placeholder="••••••••" autocomplete="current-password">
+                        <button type="button" id="toggle-pass" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" aria-label="Mostrar contraseña">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button id="login-btn" class="w-full btn-primary py-3 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Iniciar sesión
+                </button>
+                <button id="forgot-btn" class="w-full text-sm text-asunta-700 font-semibold hover:underline">Olvidé mi contraseña</button>
+
+                <!-- Recuperación de contraseña -->
+                <div id="reset-box" class="hidden border-t border-slate-200 pt-4 space-y-3">
+                    <p class="text-xs text-slate-500">Te llegará un correo para definir una nueva contraseña (requiere el correo de envío configurado en Supabase).</p>
+                    <input id="reset-email" type="email" class="input-base" placeholder="Correo del administrador">
+                    <button id="reset-btn" class="w-full btn-ghost text-sm"><i class="fa-solid fa-paper-plane mr-1"></i> Enviar correo de recuperación</button>
+                    <p id="reset-msg" class="text-xs font-semibold"></p>
+                </div>
+
+                <!-- Nueva contraseña (al aterrizar desde el enlace) -->
+                <div id="newpass-box" class="hidden border-t border-slate-200 pt-4 space-y-3">
+                    <p class="text-xs text-slate-500">Define tu nueva contraseña.</p>
+                    <input id="newpass-1" type="password" class="input-base" placeholder="Nueva contraseña (mín. 6 caracteres)">
+                    <input id="newpass-2" type="password" class="input-base" placeholder="Repite la nueva contraseña">
+                    <button id="newpass-btn" class="w-full btn-primary text-sm">Guardar nueva contraseña</button>
+                    <p id="newpass-msg" class="text-xs font-semibold"></p>
+                </div>
+
+                <p class="text-[11px] text-slate-400 text-center leading-relaxed">
+                    Acceso restringido al administrador autorizado.<br>
+                    La autorización se verifica en el servidor (Supabase) mediante RLS.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ VISTA: PANEL ============ -->
+    <div id="view-panel" class="hidden min-h-screen flex flex-col lg:flex-row">
+
+        <!-- Sidebar -->
+        <aside class="bg-slate-900 text-slate-300 lg:w-64 lg:min-h-screen lg:sticky lg:top-0 z-40">
+            <div class="p-5 flex items-center gap-3 border-b border-slate-800">
+                <div class="w-10 h-10 rounded-full bg-asunta-500 flex items-center justify-center text-white">
+                    <i class="fa-solid fa-basket-shopping"></i>
+                </div>
+                <div>
+                    <span class="text-white font-black block leading-tight">ASUNTA</span>
+                    <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Panel Admin</span>
+                </div>
+            </div>
+            <nav class="p-3 space-y-1" id="admin-nav">
+                <button data-tab="dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-left">
+                    <i class="fa-solid fa-gauge-high w-5"></i> Dashboard
+                </button>
+                <button data-tab="products" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-left">
+                    <i class="fa-solid fa-boxes-stacked w-5"></i> Productos
+                </button>
+                <button data-tab="categories" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-left">
+                    <i class="fa-solid fa-layer-group w-5"></i> Categorías
+                </button>
+                <button data-tab="promos" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-left">
+                    <i class="fa-solid fa-tags w-5"></i> Promociones
+                </button>
+                <button data-tab="orders" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-left">
+                    <i class="fa-solid fa-receipt w-5"></i> Pedidos
+                    <span id="orders-pending-badge" class="ml-auto bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full hidden">0</span>
+                </button>
+                <button data-tab="customers" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-left">
+                    <i class="fa-solid fa-users w-5"></i> Clientes
+                </button>
+                <button data-tab="inventory" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-left">
+                    <i class="fa-solid fa-warehouse w-5"></i> Inventario
+                </button>
+                <button data-tab="config" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-left">
+                    <i class="fa-solid fa-gear w-5"></i> Configuración
+                </button>
+            </nav>
+            <div class="p-3 border-t border-slate-800 space-y-2">
+                <a href="index.html" target="_blank" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800">
+                    <i class="fa-solid fa-store w-5"></i> Ver tienda pública
+                </a>
+                <button id="logout-btn" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-300 hover:bg-red-500/10">
+                    <i class="fa-solid fa-right-from-bracket w-5"></i> Cerrar sesión
+                </button>
+                <p id="admin-email" class="text-[11px] text-slate-500 px-3 pt-1 break-all"></p>
+            </div>
+        </aside>
+
+        <!-- Contenido -->
+        <main class="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+
+            <!-- DASHBOARD -->
+            <section id="panel-dashboard" class="admin-panel hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-black text-slate-900">Dashboard</h1>
+                    <button id="dash-refresh" class="btn-ghost text-sm"><i class="fa-solid fa-rotate-right mr-1"></i> Actualizar</button>
+                </div>
+                <div id="dash-cards" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5">
+                        <h3 class="font-bold text-slate-800 mb-3"><i class="fa-solid fa-ranking-star text-asunta-600 mr-2"></i>Productos más vendidos</h3>
+                        <div id="dash-top-products" class="text-sm text-slate-500">Cargando…</div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5">
+                        <h3 class="font-bold text-slate-800 mb-3"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-2"></i>Stock bajo y agotado</h3>
+                        <div id="dash-low-stock" class="text-sm text-slate-500">Cargando…</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PRODUCTOS -->
+            <section id="panel-products" class="admin-panel hidden">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <h1 class="text-2xl font-black text-slate-900">Productos</h1>
+                    <div class="flex gap-2">
+                        <button id="prod-refresh" class="btn-ghost text-sm"><i class="fa-solid fa-rotate-right mr-1"></i></button>
+                        <button id="prod-new" class="btn-primary text-sm"><i class="fa-solid fa-plus mr-1"></i> Nuevo producto</button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div class="p-4 flex flex-col sm:flex-row gap-3 border-b border-slate-100">
+                        <input id="prod-search" type="text" class="input-base flex-1" placeholder="Buscar por nombre o SKU…">
+                        <select id="prod-cat-filter" class="input-base sm:w-56"><option value="">Todas las categorías</option></select>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="admin-table">
+                            <thead><tr>
+                                <th>Producto</th><th>Categoría</th><th>Precio</th><th>Promo</th><th>Stock</th><th>Estado</th><th>Acciones</th>
+                            </tr></thead>
+                            <tbody id="prod-tbody"><tr><td colspan="7" class="text-center text-slate-400 py-8">Cargando…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CATEGORÍAS -->
+            <section id="panel-categories" class="admin-panel hidden">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <h1 class="text-2xl font-black text-slate-900">Categorías</h1>
+                    <div class="flex gap-2">
+                        <button id="cat-refresh" class="btn-ghost text-sm"><i class="fa-solid fa-rotate-right mr-1"></i></button>
+                        <button id="cat-new" class="btn-primary text-sm"><i class="fa-solid fa-plus mr-1"></i> Nueva categoría</button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="admin-table">
+                            <thead><tr><th>Nombre</th><th>Descripción</th><th>Productos</th><th>Estado</th><th>Acciones</th></tr></thead>
+                            <tbody id="cat-tbody"><tr><td colspan="5" class="text-center text-slate-400 py-8">Cargando…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PROMOCIONES -->
+            <section id="panel-promos" class="admin-panel hidden">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <h1 class="text-2xl font-black text-slate-900">Promociones y Combos</h1>
+                    <div class="flex gap-2">
+                        <button id="promo-refresh" class="btn-ghost text-sm"><i class="fa-solid fa-rotate-right mr-1"></i></button>
+                        <button id="promo-new" class="btn-primary text-sm"><i class="fa-solid fa-plus mr-1"></i> Nueva promoción</button>
+                    </div>
+                </div>
+                <div id="promo-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">Cargando…</div>
+            </section>
+
+            <!-- PEDIDOS -->
+            <section id="panel-orders" class="admin-panel hidden">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <h1 class="text-2xl font-black text-slate-900">Pedidos</h1>
+                    <button id="ord-refresh" class="btn-ghost text-sm"><i class="fa-solid fa-rotate-right mr-1"></i></button>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div class="p-4 grid grid-cols-2 sm:grid-cols-5 gap-3 border-b border-slate-100">
+                        <input id="ord-search" type="text" class="input-base col-span-2" placeholder="Buscar código, cliente o teléfono…">
+                        <select id="ord-status-filter" class="input-base">
+                            <option value="">Todos los estados</option>
+                            <option value="pending">Pendiente</option>
+                            <option value="confirmed">Confirmado</option>
+                            <option value="preparing">Preparando</option>
+                            <option value="shipped">En camino</option>
+                            <option value="delivered">Entregado</option>
+                            <option value="cancelled">Cancelado</option>
+                        </select>
+                        <input id="ord-date-from" type="date" class="input-base" title="Desde">
+                        <input id="ord-date-to" type="date" class="input-base" title="Hasta">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="admin-table">
+                            <thead><tr>
+                                <th>Código</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Pago</th><th>Estado</th><th></th>
+                            </tr></thead>
+                            <tbody id="ord-tbody"><tr><td colspan="7" class="text-center text-slate-400 py-8">Cargando…</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div id="ord-pager" class="p-4 border-t border-slate-100 text-center"></div>
+                </div>
+            </section>
+
+            <!-- INVENTARIO -->
+            <section id="panel-inventory" class="admin-panel hidden">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <h1 class="text-2xl font-black text-slate-900">Control de Inventario</h1>
+                    <button id="inv-refresh" class="btn-ghost text-sm"><i class="fa-solid fa-rotate-right mr-1"></i></button>
+                </div>
+                <div id="inv-summary" class="grid grid-cols-3 gap-4 mb-6"></div>
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-6">
+                    <div class="p-4 flex flex-col sm:flex-row gap-3 border-b border-slate-100">
+                        <input id="inv-search" type="text" class="input-base flex-1" placeholder="Buscar producto…">
+                        <select id="inv-filter" class="input-base sm:w-52">
+                            <option value="">Todos los productos</option>
+                            <option value="low">Solo stock bajo</option>
+                            <option value="out">Solo agotados</option>
+                        </select>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="admin-table">
+                            <thead><tr>
+                                <th>Producto</th><th>Stock actual</th><th>Situación</th><th class="text-right">Acciones</th>
+                            </tr></thead>
+                            <tbody id="inv-tbody"><tr><td colspan="4" class="text-center text-slate-400 py-8">Cargando…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div class="p-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-800"><i class="fa-solid fa-clock-rotate-left text-asunta-600 mr-2"></i>Historial de movimientos</h3>
+                        <select id="inv-mv-filter" class="input-base sm:w-52">
+                            <option value="">Todos los movimientos</option>
+                            <option value="entrada">Entradas</option>
+                            <option value="salida">Salidas</option>
+                            <option value="ajuste">Ajustes</option>
+                        </select>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="admin-table">
+                            <thead><tr>
+                                <th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Antes</th><th>Después</th><th>Referencia / Nota</th>
+                            </tr></thead>
+                            <tbody id="mv-tbody"><tr><td colspan="7" class="text-center text-slate-400 py-8">Cargando…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CLIENTES -->
+            <section id="panel-customers" class="admin-panel hidden">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <div>
+                        <h1 class="text-2xl font-black text-slate-900">Clientes registrados</h1>
+                        <p class="text-sm text-slate-500 mt-1">Cuentas creadas desde <code>cuenta.html</code>. <span id="cust-count" class="font-semibold text-asunta-700">0 cliente(s)</span></p>
+                    </div>
+                    <button id="cust-refresh" class="btn-ghost text-sm"><i class="fa-solid fa-rotate-right mr-1"></i> Actualizar</button>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-100">
+                        <input id="cust-search" type="text" class="input-base" placeholder="Buscar por nombre, teléfono o distrito…">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="admin-table">
+                            <thead><tr>
+                                <th>Cliente</th><th>Teléfono</th><th>Dirección favorita</th>
+                                <th class="text-center">Pedidos</th><th>Total comprado</th><th class="text-right">Acciones</th>
+                            </tr></thead>
+                            <tbody id="cust-tbody"><tr><td colspan="6" class="text-center text-slate-400 py-8">Cargando…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CONFIGURACIÓN -->
+            <section id="panel-config" class="admin-panel hidden">
+                <h1 class="text-2xl font-black text-slate-900 mb-6">Configuración de la tienda</h1>
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 max-w-3xl space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Costo de delivery (S/)</label>
+                            <input id="cfg-delivery-fee" type="number" min="0" step="0.10" class="input-base">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Delivery gratis desde (S/)</label>
+                            <input id="cfg-free-from" type="number" min="0" step="0.10" class="input-base">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">WhatsApp del negocio</label>
+                            <input id="cfg-whatsapp" type="text" class="input-base" placeholder="51 + número. Ej: 51987654321">
+                            <p class="field-hint">Formato internacional sin espacios. Actualmente es provisional (51999999999).</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Umbral de stock bajo (unidades)</label>
+                            <input id="cfg-low-stock" type="number" min="0" step="1" class="input-base">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección comercial</label>
+                        <input id="cfg-address" type="text" class="input-base">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Latitud del negocio</label>
+                            <input id="cfg-lat" type="number" step="0.000001" class="input-base">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Longitud del negocio</label>
+                            <input id="cfg-lng" type="number" step="0.000001" class="input-base">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Métodos de pago ofrecidos</label>
+                        <div id="cfg-pay-list" class="flex flex-wrap gap-2 mb-2"></div>
+                        <div class="flex gap-2">
+                            <input id="cfg-pay-new" type="text" class="input-base flex-1" placeholder="Ej. Yape, Plin, Efectivo…">
+                            <button id="cfg-pay-add" class="btn-ghost text-sm"><i class="fa-solid fa-plus mr-1"></i> Agregar</button>
+                        </div>
+                    </div>
+                    <button id="cfg-save" class="btn-primary"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar configuración</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ============ MODAL PRODUCTO ============ -->
+    <div id="product-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="ASUNTA.adminProducts.closeModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden">
+                <div class="p-5 bg-asunta-700 text-white flex items-center justify-between">
+                    <h2 id="product-modal-title" class="font-bold text-lg">Nuevo producto</h2>
+                    <button onclick="ASUNTA.adminProducts.closeModal()" class="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form id="product-form" class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input type="hidden" id="pf-id">
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre *</label>
+                        <input id="pf-name" type="text" maxlength="150" class="input-base" required>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Descripción</label>
+                        <textarea id="pf-desc" maxlength="1000" rows="2" class="input-base"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Categoría *</label>
+                        <select id="pf-category" class="input-base" required></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">SKU / Código</label>
+                        <input id="pf-sku" type="text" maxlength="50" class="input-base" placeholder="Ej. ARZ-001">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Precio de venta (S/) *</label>
+                        <input id="pf-price" type="number" min="0.01" step="0.10" class="input-base" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Precio de costo (S/)</label>
+                        <input id="pf-cost" type="number" min="0" step="0.10" class="input-base">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Unidad</label>
+                        <select id="pf-unit" class="input-base">
+                            <option value="unidad">unidad</option><option value="kg">kg</option><option value="g">g</option>
+                            <option value="litro">litro</option><option value="ml">ml</option><option value="paquete">paquete</option>
+                            <option value="caja">caja</option><option value="bolsa">bolsa</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Stock inicial</label>
+                        <input id="pf-stock" type="number" min="0" step="1" class="input-base" value="0">
+                        <p id="pf-stock-hint" class="field-hint hidden">En productos existentes, el stock se modifica desde el módulo Inventario (para mantener el historial).</p>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Fotografía (JPG, PNG o WEBP, máx. 2 MB)</label>
+                        <div class="flex items-center gap-4">
+                            <img id="pf-img-preview" src="" alt="" class="w-20 h-20 rounded-xl object-cover border border-slate-200 hidden">
+                            <input id="pf-image" type="file" accept="image/jpeg,image/png,image/webp" class="input-base flex-1">
+                            <button type="button" id="pf-img-clear" class="btn-danger text-sm hidden"><i class="fa-solid fa-trash mr-1"></i> Quitar</button>
+                        </div>
+                        <p id="pf-img-progress" class="field-hint hidden"></p>
+                    </div>
+                    <div class="sm:col-span-2 flex items-center gap-6">
+                        <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                            <input id="pf-active" type="checkbox" checked class="w-4 h-4 accent-asunta-600"> Activo (visible en la tienda)
+                        </label>
+                        <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                            <input id="pf-featured" type="checkbox" class="w-4 h-4 accent-asunta-600"> Destacado
+                        </label>
+                    </div>
+                    <div class="sm:col-span-2 flex gap-3 pt-2">
+                        <button type="submit" id="pf-save" class="btn-primary flex-1"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar producto</button>
+                        <button type="button" onclick="ASUNTA.adminProducts.closeModal()" class="btn-ghost">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL CATEGORÍA ============ -->
+    <div id="category-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="ASUNTA.adminCategories.closeModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+                <div class="p-5 bg-asunta-700 text-white flex items-center justify-between">
+                    <h2 id="category-modal-title" class="font-bold text-lg">Nueva categoría</h2>
+                    <button onclick="ASUNTA.adminCategories.closeModal()" class="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form id="category-form" class="p-6 space-y-4">
+                    <input type="hidden" id="cf-id">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre *</label>
+                        <input id="cf-name" type="text" maxlength="100" class="input-base" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Descripción</label>
+                        <textarea id="cf-desc" maxlength="300" rows="2" class="input-base"></textarea>
+                    </div>
+                    <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <input id="cf-active" type="checkbox" checked class="w-4 h-4 accent-asunta-600"> Activa (visible en la tienda)
+                    </label>
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit" class="btn-primary flex-1"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar</button>
+                        <button type="button" onclick="ASUNTA.adminCategories.closeModal()" class="btn-ghost">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL PROMOCIÓN ============ -->
+    <div id="promo-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="ASUNTA.adminPromos.closeModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden">
+                <div class="p-5 bg-asunta-700 text-white flex items-center justify-between">
+                    <h2 id="promo-modal-title" class="font-bold text-lg">Nueva promoción</h2>
+                    <button onclick="ASUNTA.adminPromos.closeModal()" class="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form id="promo-form" class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input type="hidden" id="pm-id">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Tipo *</label>
+                        <select id="pm-type" class="input-base">
+                            <option value="combo">Combo (paquete de productos)</option>
+                            <option value="oferta">Oferta (un solo producto)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Etiqueta (badge)</label>
+                        <input id="pm-badge" type="text" maxlength="50" class="input-base" placeholder="Ej. ¡Ahorra S/ 3.20!">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Título *</label>
+                        <input id="pm-title" type="text" maxlength="150" class="input-base" required>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Descripción</label>
+                        <textarea id="pm-desc" maxlength="500" rows="2" class="input-base"></textarea>
+                    </div>
+                    <div id="pm-oferta-box" class="hidden">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Producto en oferta *</label>
+                        <select id="pm-product" class="input-base"></select>
+                    </div>
+                    <div id="pm-oferta-price-box" class="hidden">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Modo de descuento</label>
+                        <select id="pm-discount-mode" class="input-base">
+                            <option value="price">Precio promocional fijo (S/)</option>
+                            <option value="percent">Porcentaje de descuento (%)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1" id="pm-price-label">Precio del combo (S/) *</label>
+                        <input id="pm-price" type="number" min="0.01" step="0.10" class="input-base">
+                        <p id="pm-old-price-hint" class="field-hint"></p>
+                    </div>
+                    <div id="pm-percent-box" class="hidden">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Descuento (%)</label>
+                        <input id="pm-percent" type="number" min="1" max="100" step="1" class="input-base">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Vigente desde</label>
+                        <input id="pm-start" type="date" class="input-base">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Vigente hasta</label>
+                        <input id="pm-end" type="date" class="input-base">
+                    </div>
+                    <div class="sm:col-span-2" id="pm-combo-box">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Productos del combo *</label>
+                        <div id="pm-items" class="space-y-2"></div>
+                        <button type="button" id="pm-add-item" class="btn-ghost text-sm mt-2"><i class="fa-solid fa-plus mr-1"></i> Agregar producto al combo</button>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Imagen (opcional, JPG/PNG/WEBP máx. 2 MB)</label>
+                        <div class="flex items-center gap-4">
+                            <img id="pm-img-preview" src="" alt="" class="w-20 h-20 rounded-xl object-cover border border-slate-200 hidden">
+                            <input id="pm-image" type="file" accept="image/jpeg,image/png,image/webp" class="input-base flex-1">
+                            <button type="button" id="pm-img-clear" class="btn-danger text-sm hidden"><i class="fa-solid fa-trash mr-1"></i> Quitar</button>
+                        </div>
+                        <p id="pm-img-progress" class="field-hint hidden"></p>
+                    </div>
+                    <label class="sm:col-span-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <input id="pm-active" type="checkbox" checked class="w-4 h-4 accent-asunta-600"> Activa (visible en la tienda)
+                    </label>
+                    <div class="sm:col-span-2 flex gap-3 pt-2">
+                        <button type="submit" class="btn-primary flex-1"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar promoción</button>
+                        <button type="button" onclick="ASUNTA.adminPromos.closeModal()" class="btn-ghost">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL DETALLE DE PEDIDO ============ -->
+    <div id="order-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="ASUNTA.adminOrders.closeModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden">
+                <div class="p-5 bg-asunta-700 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-receipt text-2xl text-asunta-yellow-400"></i>
+                        <div>
+                            <h2 id="om-code" class="font-bold text-lg">ASU-000000</h2>
+                            <p id="om-date" class="text-xs text-asunta-100"></p>
+                        </div>
+                    </div>
+                    <button onclick="ASUNTA.adminOrders.closeModal()" class="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="p-6 space-y-5">
+                    <div id="om-status-badge"></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1">
+                            <h4 class="font-bold text-slate-700 mb-1"><i class="fa-solid fa-user mr-1"></i> Cliente</h4>
+                            <p><span class="text-slate-400">Nombre:</span> <span id="om-name" class="font-semibold"></span></p>
+                            <p><span class="text-slate-400">Teléfono:</span> <a id="om-phone" href="#" class="font-semibold text-asunta-700"></a></p>
+                            <p><span class="text-slate-400">Correo:</span> <span id="om-email" class="font-semibold"></span></p>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1">
+                            <h4 class="font-bold text-slate-700 mb-1"><i class="fa-solid fa-location-dot mr-1"></i> Entrega</h4>
+                            <p><span class="text-slate-400">Dirección:</span> <span id="om-address" class="font-semibold"></span></p>
+                            <p><span class="text-slate-400">Referencia:</span> <span id="om-ref" class="font-semibold"></span></p>
+                            <p><span class="text-slate-400">Distrito:</span> <span id="om-district" class="font-semibold"></span></p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm">
+                        <h4 class="font-bold text-slate-700 mb-1"><i class="fa-solid fa-comment mr-1"></i> Indicaciones del cliente</h4>
+                        <p id="om-notes" class="text-slate-600">-</p>
+                    </div>
+                    <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table class="admin-table">
+                            <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr></thead>
+                            <tbody id="om-items"></tbody>
+                        </table>
+                    </div>
+                    <div class="text-sm space-y-1">
+                        <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span id="om-subtotal" class="font-semibold"></span></div>
+                        <div class="flex justify-between"><span class="text-slate-500">Delivery</span><span id="om-delivery" class="font-semibold"></span></div>
+                        <div class="flex justify-between font-bold text-lg border-t border-slate-200 pt-2"><span>Total</span><span id="om-total" class="text-asunta-700"></span></div>
+                        <div class="flex justify-between"><span class="text-slate-500">Método de pago</span><span id="om-payment" class="font-semibold"></span></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-200 pt-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">ESTADO DEL PEDIDO</label>
+                            <select id="om-status" class="input-base">
+                                <option value="pending">Pendiente</option>
+                                <option value="confirmed">Confirmado</option>
+                                <option value="preparing">Preparando</option>
+                                <option value="shipped">En camino</option>
+                                <option value="delivered">Entregado</option>
+                                <option value="cancelled">Cancelado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">ESTADO DEL PAGO</label>
+                            <select id="om-payment-status" class="input-base">
+                                <option value="pending">Pendiente de pago</option>
+                                <option value="paid">Pagado</option>
+                                <option value="refunded">Reembolsado</option>
+                                <option value="failed">Falló</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                        <button id="om-save-status" class="btn-primary flex-1"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar cambios</button>
+                        <button id="om-cancel" class="btn-danger"><i class="fa-solid fa-ban mr-1"></i> Cancelar pedido (devuelve stock)</button>
+                        <button onclick="ASUNTA.adminOrders.closeModal()" class="btn-ghost">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL INVENTARIO (entrada/salida/ajuste) ============ -->
+    <div id="inv-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="ASUNTA.inventory.closeModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+                <div class="p-5 bg-asunta-700 text-white flex items-center justify-between">
+                    <h2 id="inv-modal-title" class="font-bold text-lg">Movimiento de inventario</h2>
+                    <button onclick="ASUNTA.inventory.closeModal()" class="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form id="inv-form" class="p-6 space-y-4">
+                    <input type="hidden" id="im-type">
+                    <input type="hidden" id="im-product-id">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
+                        <span class="text-slate-400">Producto:</span> <span id="im-product-name" class="font-bold text-slate-800"></span><br>
+                        <span class="text-slate-400">Stock actual:</span> <span id="im-current" class="font-bold text-slate-800"></span>
+                    </div>
+                    <div id="im-qty-box">
+                        <label id="im-qty-label" class="block text-sm font-semibold text-slate-700 mb-1">Cantidad</label>
+                        <input id="im-qty" type="number" min="0.001" step="0.001" class="input-base">
+                    </div>
+                    <div id="im-adjust-box" class="hidden">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Stock nuevo (conteo físico)</label>
+                        <input id="im-adjust" type="number" min="0" step="0.001" class="input-base">
+                    </div>
+                    <div>
+                        <label id="im-notes-label" class="block text-sm font-semibold text-slate-700 mb-1">Nota / Justificación</label>
+                        <textarea id="im-notes" rows="2" maxlength="300" class="input-base" placeholder="Ej. Recepción de mercadería, producto dañado…"></textarea>
+                        <p class="field-hint" id="im-notes-hint"></p>
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit" class="btn-primary flex-1"><i class="fa-solid fa-check mr-1"></i> Registrar</button>
+                        <button type="button" onclick="ASUNTA.inventory.closeModal()" class="btn-ghost">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLE CLIENTE -->
+    <div id="customer-modal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+        <div class="flex items-start justify-center min-h-screen p-4">
+            <div class="bg-slate-900/50 absolute inset-0" onclick="ASUNTA.adminCustomers.closeDetail()"></div>
+            <div class="bg-white rounded-2xl shadow-xl relative w-full max-w-2xl my-8">
+                <div class="flex items-center justify-between p-5 border-b border-slate-100">
+                    <h2 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-user mr-2 text-asunta-600"></i>Detalle del cliente</h2>
+                    <button onclick="ASUNTA.adminCustomers.closeDetail()" class="text-slate-400 hover:text-slate-700 p-2" aria-label="Cerrar">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-5">
+                    <!-- Tarjeta de identidad -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-asunta-50 border border-asunta-200 rounded-xl p-4 space-y-2">
+                            <div>
+                                <p class="text-xs text-slate-500 font-semibold">Nombre</p>
+                                <p id="cm-name" class="font-bold text-slate-800">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-semibold">Teléfono</p>
+                                <p id="cm-phone" class="font-semibold text-slate-700">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-semibold">Cliente desde</p>
+                                <p id="cm-created" class="text-xs text-slate-600">-</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+                            <div>
+                                <p class="text-xs text-slate-500 font-semibold">Dirección favorita</p>
+                                <p id="cm-address" class="text-sm text-slate-700">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-semibold">Distrito</p>
+                                <p id="cm-district" class="text-sm text-slate-700">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Resumen de actividad -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-white border border-slate-200 rounded-xl p-4 text-center">
+                            <p class="text-xs text-slate-500 font-semibold">Pedidos</p>
+                            <p id="cm-orders-count" class="text-2xl font-black text-asunta-700">0</p>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-xl p-4 text-center">
+                            <p class="text-xs text-slate-500 font-semibold">Total comprado</p>
+                            <p id="cm-total-spent" class="text-2xl font-black text-asunta-700">S/ 0.00</p>
+                        </div>
+                    </div>
+                    <!-- Historial -->
+                    <div>
+                        <h3 class="font-bold text-slate-800 mb-2 text-sm"><i class="fa-solid fa-receipt mr-1 text-asunta-600"></i>Historial de pedidos</h3>
+                        <div id="cm-orders-list" class="space-y-2"></div>
+                    </div>
+                    <div class="pt-2 text-right">
+                        <button onclick="ASUNTA.adminCustomers.closeDetail()" class="btn-ghost">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-[60] transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-medium border border-slate-700">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-asunta-yellow-400 text-lg"></i>
+            <span id="toast-message">Listo</span>
+        </div>
+    </div>
+
+    <!-- Lógica -->
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/admin-products.js"></script>
+    <script src="js/admin-categories.js"></script>
+    <script src="js/admin-promos.js"></script>
+    <script src="js/admin-orders.js"></script>
+    <script src="js/admin-customers.js"></script>
+    <script src="js/inventory.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => ASUNTA.admin.boot());
+    </script>
+</body>
+</html>
