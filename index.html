@@ -71,6 +71,14 @@
         }
         /* El header sticky mide h-20 (80px): dejamos aire al llegar al ancla */
         #nuestra-tienda { scroll-margin-top: 6rem; }
+        /* FIX buscador: nunca se colapsa. En pantallas grandes (lg+) mantiene
+           un ancho fijo de 24rem y no permite que el flex lo encoja; por
+           debajo de lg ocupa toda la fila. El prefijo #filter-bar da más
+           especificidad que cualquier regla de css/styles.css. */
+        #filter-bar #search-input { width: 100%; min-width: 0; }
+        @media (min-width: 1024px) {
+            #filter-bar .search-box { width: 24rem; flex-shrink: 0; }
+        }
     </style>
     <!-- Sin JS: los elementos .reveal deben verse siempre -->
     <noscript>
@@ -218,23 +226,23 @@
         <!-- Search & Filter Section (visible en Productos y Ofertas) -->
         <section id="filter-bar" data-show-on="productos,ofertas" class="page-section bg-white border-b border-slate-200 py-6 shadow-sm sticky top-20 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
-                    <!-- Search Bar -->
-                    <div class="w-full md:w-96 relative">
+                <div class="flex flex-col lg:flex-row gap-4 lg:items-center">
+                    <!-- Search Bar: shrink-0 evita que el flex lo aplaste (antes solo se veía el ícono) -->
+                    <div class="search-box w-full lg:w-96 lg:shrink-0 relative">
                         <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </span>
                         <input type="text" id="search-input" placeholder="Buscar arroz, aceite, leche, detergente..." class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-asunta-500 focus:border-asunta-500 text-sm transition-all shadow-inner">
                     </div>
                     <!-- Sort + Category Filters -->
-                    <div class="w-full flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
-                        <select id="sort-select" class="input-base w-full lg:w-48 bg-white" aria-label="Ordenar productos">
+                    <div class="w-full min-w-0 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <select id="sort-select" class="input-base w-full sm:w-48 sm:shrink-0 bg-white" aria-label="Ordenar productos">
                             <option value="new">Más recientes</option>
                             <option value="name">Nombre (A-Z)</option>
                             <option value="price-asc">Precio: menor a mayor</option>
                             <option value="price-desc">Precio: mayor a menor</option>
                         </select>
-                        <div id="category-filters" class="w-full lg:w-auto flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
+                        <div id="category-filters" class="w-full min-w-0 flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
                             <div class="skeleton h-9 w-24"></div>
                             <div class="skeleton h-9 w-24"></div>
                             <div class="skeleton h-9 w-24"></div>
